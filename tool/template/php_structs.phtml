@@ -1,0 +1,182 @@
+<?$data = isset($data) ? $data : [];?>namespace <?=$data['namespace']?>;
+
+<?
+$has_binary = false;
+foreach ($data['fields'] as $field) {
+    if ($field['typeId'] == 'binary') {
+        $has_binary = true;
+    }
+}
+?>
+use com\bj58\spat\scf\serialize\component\SCFType;
+<? if ($has_binary) : ?>
+use Throwable;
+<? endif; ?>
+<? foreach ($data['fields'] as $field) {
+    $data['uses'][] = $this->getStructRecursive($field, 'php', $data['current_json'], true);
+} ?>
+<? foreach (array_unique(array_filter((array) $data['uses'])) as $full_class_name): ?>
+    <? if (substr($full_class_name, 0, strrpos($full_class_name, '\\')) != $data['namespace']): ?>
+
+use <?=$full_class_name?>;
+
+    <? endif ?>
+<? endforeach ?>
+
+/**
+ * <?=$this->renderComment($data['doc'], " * ")?>
+ */
+class <?=$data['name'] . PHP_EOL?>
+{
+    /**
+     * @var array
+     */
+    static $_TSPEC;
+
+    /**
+     * @var string
+     */
+    static $_SCFNAME = '<?=$data['name']?>';
+
+<? foreach ($data['fields'] as $field): ?>
+    /**
+     * @var <?=$this->getPhpTypeDoc($field['typeId'], $field['type'], $field)?> <?=$this->renderComment($field['doc'], "     * ")?>
+     */
+    public $<?=$field['name']?>;
+
+<? endforeach ?>
+
+    /**
+<? foreach ($data['fields'] as $field): ?>
+     * @param <?=$this->getPhpTypeDoc($field['typeId'], $field['type'], $field)?> $<?=$field['name']?>
+
+<? endforeach ?>
+     */
+    public function __construct(<?=$this->getPhpArgumentList($data['fields'])?>)
+    {
+        if (! isset(self::$_TSPEC)) {
+            self::$_TSPEC = [
+<? foreach ($data['fields'] as $field): ?>
+                <?=$field['key']?> => [
+                    'var' => '<?=$field['name']?>',
+                    'sortId' => <?=$field['key']?>,
+                    'orderId' => <?=$field['key']?>,
+                    'isGeneric' => false,
+<?=$this->renderPhpSpec(__DIR__ . '/php_structs_spec.phtml', $field['type'], $field['typeId'], $field, '            ')?>
+                ],
+<? endforeach ?>
+            ];
+        }
+
+<? foreach ($data['fields'] as $field): ?>
+
+        $this-><?=$field['name']?> = $<?=$field['name']?>;
+
+<? endforeach ?>
+
+    }
+
+    /**
+     * @param array $data
+     *
+     * @return <?=$data['name'] . PHP_EOL?>
+     */
+    public static function newInstance($data)
+    {
+        $instance = new self;
+        $data = (array) $data;
+
+<? foreach ($data['fields'] as $field): ?>
+
+        $instance-><?=$field['name']?> = $data['<?=$field['name']?>'];
+
+<? endforeach ?>
+
+
+        return $instance;
+    }
+
+    /**
+     * @return array
+     */
+    public static function getTSPEC()
+    {
+        return <?=$data['name']?>::$_TSPEC;
+    }
+
+    public static function setTSPEC($_TSPEC)
+    {
+        <?=$data['name']?>::$_TSPEC = $_TSPEC;
+    }
+
+<? foreach ($data['fields'] as $field): ?>
+    /**
+     * @return <?=$this->getPhpTypeDoc($field['typeId'], $field['type'], $field) . PHP_EOL?>
+     */
+    public function get<?=ucfirst($field['name'])?>()
+    {
+        return $this-><?=$field['name']?>;
+    }
+
+    /**
+     * @var <?=$this->getPhpTypeDoc($field['typeId'], $field['type'], $field)?> $<?=$field['name'] . PHP_EOL?>
+     */
+    public function set<?=ucfirst($field['name'])?>($<?=$field['name']?>)
+    {
+    <? if ($field['typeId'] == 'struct' && $field['enum_field']): ?>
+
+        $return_type = <?=$this->getStructRecursive($field, 'php', '', false)?>::class;
+        $needle = $return_type . '::';
+        if (is_string($<?=$field['name']?>) && strpos($<?=$field['name']?>, $needle) === 0) {
+            $constant_name = str_replace($needle, '', $<?=$field['name']?>);
+            $this-><?=$field['name']?> = new <?=$this->getStructRecursive($field, 'php', '', false)?>($constant_name);
+            return;
+        }
+    <? elseif($field['typeId'] == 'list' && $field['type']['elemTypeId'] == 'struct' && $field['type']['enum_field']): ?>
+
+        if (is_array($<?=$field['name']?>)) {
+            $this-><?=$field['name']?> = [];
+            $return_type = <?=$this->getStructRecursive($field, 'php', '', false)?>::class;
+            $needle = $return_type . '::';
+            foreach ($<?=$field['name']?> as $k => $v) {
+                if (is_string($v) && strpos($v, $needle) === 0) {
+                    $constant_name = str_replace($needle, '', $v);
+                    $this-><?=$field['name']?>[$k] = new <?=$this->getStructRecursive($field, 'php', '', false)?>($constant_name);
+                } elseif (is_object($v) || is_null($v)) {
+                    $this-><?=$field['name']?>[$k] = $v;
+                }
+            }
+            return;
+        }
+    <? elseif ($field['typeId'] == 'binary') : ?>
+
+        $<?=$field['name']?> = $this->resolveEnum($<?=$field['name']?>);
+
+    <? endif; ?>
+
+        $this-><?=$field['name']?> = $<?=$field['name']?>;
+    }
+
+<? endforeach ?>
+
+<? if ($has_binary) : ?>
+    private function resolveEnum($data)
+    {
+        if (is_array($data)) {
+            foreach ($data as $k => $v) {
+                $data[$k] = $this->resolveEnum($v);
+            }
+        } elseif (is_string($data)) {
+            list($class, $const) = explode('::', $data);
+            if ($class && class_exists($class) && $const) {
+                try {
+                    $data = new $class($const);
+                } catch (Throwable $e) {
+                }
+            }
+        }
+
+        return $data;
+    }
+<? endif; ?>
+}

@@ -1,0 +1,87 @@
+<?$data = isset($data) ? $data : [];?>namespace <?=$data['namespace']?>;
+
+use Exception;
+use com\bj58\spat\scf\client\proxy\ProxyStandard;
+use com\bj58\spat\scf\serialize\serializer\ObjectSerializer;
+<? foreach ($data['functions'] as $function) {
+    foreach ($function['arguments'] as $argument) {
+        $data['uses'][] = $this->getStructRecursive($argument, 'php', $data['current_json'], true);
+    }
+    $data['uses'][] = $this->getStructRecursive($function, 'php', $data['current_json'], true);
+} ?>
+<? foreach (array_unique(array_filter((array) $data['uses'])) as $full_class_name): ?>
+    <? if (substr($full_class_name, 0, strrpos($full_class_name, '\\')) != $data['namespace']): ?>
+
+use <?=$full_class_name?>;
+
+    <? endif ?>
+<? endforeach ?>
+
+/**
+ * <?=$this->renderComment($data['doc'], " * ")?>
+ */
+class <?=$data['name'] . PHP_EOL?>
+{
+<? if ($data['tcp_url'] && list($service_name, $look_up) = explode('/', $data['tcp_url'])): ?>
+    const SERVICE_NAME = '<?=$service_name?>';
+    const LOOK_UP = '<?=$look_up?>';
+
+<? endif ?>
+    /**
+     * @var ProxyStandard
+     */
+    public $ps;
+
+    public function __construct($serviceName = '', $lookup = '', $initObj = '')
+    {
+        $ps = new ProxyStandard($serviceName, $lookup, $initObj);
+        $this->ps = $ps;
+    }
+
+<? foreach ($data['functions'] as $function): ?>
+    /**
+     * <?=$this->renderComment($function['doc'], "     * ")?>
+    <? foreach ($function['arguments'] as $argument): ?>
+
+     * @param <?=$this->getPhpTypeDoc($argument['typeId'], $argument['type'], $argument)?> $<?=$argument['name']?>
+
+    <? endforeach ?>
+
+     *
+     * @return <?=$this->getPhpTypeDoc($function['returnTypeId'], $function['returnType'], $function)?>|mixed
+     * @throws Exception
+     */
+    public function <?=$function['name']?>(<?=$this->getPhpArgumentList($function['arguments'])?>)
+    {
+        $key = $this->ps->getInitObj();
+
+    <? foreach ($function['arguments'] as $argument): ?>
+        <? if ($class = $this->getStructRecursive($argument, 'php', '', false)): ?>
+
+        ObjectSerializer::GetTypeInfo(new <?=$class?>(), $key);
+
+        <? endif ?>
+    <? endforeach ?>
+
+    <? if ($class = $this->getStructRecursive($function, 'php', '', false)): ?>
+
+        ObjectSerializer::GetTypeInfo(new <?=$class?>(), $key);
+
+    <? endif ?>
+
+        $value = [
+    <? foreach ($function['arguments'] as $argument): ?>
+
+            '<?=$argument['key']?>@<?=$this->getScfType($argument['typeId'], $argument['type'])?>' => $<?=$argument['name']?>,
+
+    <? endforeach ?>
+
+        ];
+        $res = $this->ps->invoke('<?=$function['name']?>', $value, true);
+
+        return $res;
+    }
+
+<? endforeach ?>
+
+}

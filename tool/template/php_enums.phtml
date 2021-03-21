@@ -1,0 +1,182 @@
+<?$data = isset($data) ? $data : [];?>namespace <?=$data['namespace']?>;
+
+use Exception;
+
+/**
+ * <?=$this->renderComment($data['doc'], " * ")?>
+ */
+class <?=$data['name'] . PHP_EOL?>
+{
+<? foreach ($data['members'] as $enum): ?>
+    /**
+     * <?=$this->renderComment($enum['doc'], "     * ")?>
+     */
+    const <?=$enum['name']?> = '<?=$enum['name']?>';
+
+<? endforeach ?>
+
+    /**
+     * @var bool
+     */
+    static $_IS_ENUM = true;
+
+    /**
+     * @var array
+     */
+    static $_TSPEC;
+
+    /**
+     * @var string
+     */
+    static $_SCFNAME = '<?=$data['namespace']?>\<?=$data['name']?>';
+
+    /**
+     * @var array
+     */
+    static public $__codes = [
+        '' => '',
+<? foreach ($data['members'] as $enum): ?>
+        self::<?=$enum['name']?> => '<?=$enum['value']?>',
+<? endforeach ?>
+    ];
+
+    /**
+     * @var array
+     */
+    static public $__messages = [
+        '' => '',
+<? foreach ($data['members'] as $enum): ?>
+        self::<?=$enum['name']?> => '<?=trim($enum['doc'])?>',
+<? endforeach ?>
+    ];
+
+    /**
+     * @var int
+     */
+    public $code;
+
+    /**
+     * @var string
+     */
+    public $message;
+
+    /**
+     * @param string $name
+     *
+     * @throws Exception
+     */
+    public function __construct($name = '')
+    {
+        if (! isset(self::$_TSPEC)) {
+            self::$_TSPEC = [
+                1 => 'Enum',
+            ];
+        }
+        if (! in_array($name, array_keys(self::$__codes))) {
+            throw new Exception("{$name} not in \$__codes: " . json_encode(self::$__codes));
+        }
+        $this->code = self::$__codes[$name];
+        $this->message = self::$__messages[$name];
+    }
+
+    /**
+     * @param $code
+     *
+     * @return <?=$data['name']?>|null
+     */
+    public static function getEnumByCode($code)
+    {
+        $name = array_flip(self::$__codes)[$code];
+
+        try {
+            return $name ? new self($name) : null;
+        } catch (Exception $e) {
+            return null;
+        }
+    }
+
+    /**
+     * @return <?=$data['name']?>[]
+     */
+    public static function getAllEnums()
+    {
+        $list = [];
+        foreach(self::$__codes as $name => $code){
+            if ($name) {
+                try {
+                    $list[] = new self($name);
+                } catch (Exception $e) {
+                }
+            }
+        }
+
+        return $list;
+    }
+
+    /**
+     * @return string|null
+     */
+    public function getConstant()
+    {
+        $name = array_flip(self::$__codes)[$this->code];
+
+        return $name ? : null;
+    }
+
+    /**
+     * @return array
+     */
+    public static function getTSPEC()
+    {
+        return self::$_TSPEC;
+    }
+
+    /**
+     * @param $_TSPEC
+     */
+    public static function setTSPEC($_TSPEC)
+    {
+        self::$_TSPEC = $_TSPEC;
+    }
+
+    /**
+     * @return string
+     */
+    public function __toString()
+    {
+        return array_search($this->code, self::$__codes);
+    }
+
+    /**
+     * @param $code
+     */
+    public function setCode($code)
+    {
+        $this->code = $code;
+    }
+
+    /**
+     * @return int
+     */
+    public function getCode()
+    {
+        return $this->code;
+    }
+
+    /**
+     * @param $message
+     */
+    public function setMessage($message)
+    {
+        $this->message = $message;
+    }
+
+    /**
+     * @return string
+     */
+    public function getMessage()
+    {
+        return $this->message;
+    }
+}
+

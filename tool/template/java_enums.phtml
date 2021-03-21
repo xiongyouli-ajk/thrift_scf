@@ -1,0 +1,59 @@
+<?$data = isset($data) ? $data : [];?>package <?=$data['namespace']?>;
+
+import com.bj58.spat.scf.serializer.component.annotation.EnumDefaultNull;
+import com.bj58.spat.scf.serializer.component.annotation.SCFMember;
+import com.bj58.spat.scf.serializer.component.annotation.SCFSerializable;
+
+import java.util.HashMap;
+import java.util.Map;
+
+/**
+ * <?=$this->renderComment($data['doc'], " * ")?>
+ */
+@SCFSerializable
+@EnumDefaultNull
+public enum <?=$data['name']?> {
+
+<? foreach ($data['members'] as $k => $enum): ?>
+    <?=$enum['name']?>(<?=$enum['value']?>, "<?=trim($enum['doc'])?>")<?=($k + 1) < count($data['members']) ? ',' : ';'?>
+
+<? endforeach ?>
+
+    @SCFMember(orderId = 1)
+    private int code;
+
+    @SCFMember(orderId = 2)
+    private String message;
+
+    private static final Map<Integer, <?=$data['name']?>> codeMap = new HashMap<Integer, <?=$data['name']?>>() {{
+<? foreach ($data['members'] as $k => $enum): ?>
+        put(<?=$enum['value']?>, <?=$enum['name']?>);
+<? endforeach ?>
+    }};
+
+    <?=$data['name']?>(int code, String message) {
+        this.code = code;
+        this.message = message;
+    }
+
+    public static <?=$data['name']?> getEnumByCode(int code){
+        return codeMap.get(code);
+    }
+
+    public int getCode() {
+        return code;
+    }
+
+    public void setCode(int code) {
+        this.code = code;
+    }
+
+    public String getMessage() {
+        return message;
+    }
+
+    public void setMessage(String message) {
+        this.message = message;
+    }
+}
+

@@ -1,0 +1,41 @@
+<?$data = isset($data) ? $data : [];?>package <?=$data['namespace']?>;
+
+import com.bj58.spat.scf.server.contract.annotation.OperationContract;
+import com.bj58.spat.scf.server.contract.annotation.ServiceContract;
+<? foreach ($data['functions'] as $function) {
+    foreach ($function['arguments'] as $argument) {
+        $data['imports'][] = $this->getStructRecursive($argument, 'java', $data['current_json'], true);
+    }
+    $data['imports'][] = $this->getStructRecursive($function, 'java', $data['current_json'], true);
+} ?>
+<? foreach (array_unique(array_filter((array) $data['imports'])) as $full_class_name): ?>
+    <? if (substr($full_class_name, 0, strrpos($full_class_name, '.')) != $data['namespace']): ?>
+
+import <?=$full_class_name?>;
+
+    <? endif ?>
+<? endforeach ?>
+
+/**
+ * <?=$this->renderComment($data['doc'], " * ")?>
+ */
+@ServiceContract
+public interface <?=$data['name']?> {
+<? if ($data['tcp_url']): ?>
+    String TCP_URL = "tcp://<?=$data['tcp_url']?>";
+
+<? endif ?>
+
+<? foreach ($data['functions'] as $function): ?>
+    /**
+     * <?=$this->renderComment($function['doc'], "     * ")?>
+     */
+    @OperationContract
+    <?=$this->getJavaType($function['returnTypeId'], $function['returnType'], $function)?> <?=$function['name']?>(<?=$this->getJavaArgumentList($function['arguments'])?>);
+
+<? endforeach ?>
+
+}
+
+
+

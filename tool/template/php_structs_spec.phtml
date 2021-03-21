@@ -1,0 +1,25 @@
+<?$data=isset($data)?$data:[]?><?=$data['prefix']?>    'type' => SCFType::<?=$this->getScfTypeConst($data['typeId'], 'v1')?>,
+<? if ($type_v3 = $this->getScfTypeConst($data['typeId'], 'v3')): ?>
+<?=$data['prefix']?>    'typev3' => SCFType::<?=$this->getScfTypeConst($data['typeId'], 'v1')?>,
+<? endif ?>
+<? if ('struct' == $data['typeId']): ?>
+<?=$data['prefix']?>    'class' => new <?=$this->getShortClassName($data['class'])?>,
+<? elseif('binary' == $data['typeId']): ?>
+<?=$data['prefix']?>    'class' => new <?=$this->convertImportTypeToPhpClass($data['import_type'])?>,
+<? elseif('map' == $data['typeId']): ?>
+<?=$data['prefix']?>    'key' => [
+<?=$data['prefix']?>        'type' => SCFTYPE::<?=$this->getScfTypeConst($data['keyTypeId'], 'v1')?>,
+<?=$data['prefix']?>    ],
+<?=$data['prefix']?>    'value' => [
+<?=$this->renderPhpSpec(__DIR__ . '/php_structs_spec.phtml', $data['valueType'], $data['valueTypeId'], $data['field_extra'], $data['prefix'])?>
+<? if ('list' != $data['valueType']['typeId']): ?>
+<?=$data['prefix']?>        'elem' => [
+<?=$this->renderPhpSpec(__DIR__ . '/php_structs_spec.phtml', $data['valueType'], $data['valueTypeId'], $data['field_extra'], $data['prefix'] . '    ')?>
+<?=$data['prefix']?>        ],
+<? endif ?>
+<?=$data['prefix']?>    ],
+<? elseif('list' == $data['typeId']): ?>
+<?=$data['prefix']?>    'elem' => [
+<?=$this->renderPhpSpec(__DIR__ . '/php_structs_spec.phtml', $data['elemType'], $data['elemTypeId'], $data['field_extra'], $data['prefix'])?>
+<?=$data['prefix']?>    ],
+<? endif ?>

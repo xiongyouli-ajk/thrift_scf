@@ -1,0 +1,59 @@
+<?$data = isset($data) ? $data : [];?>package <?=$data['namespace']?>;
+
+import com.bj58.spat.scf.serializer.component.annotation.SCFMember;
+import com.bj58.spat.scf.serializer.component.annotation.SCFSerializable;
+<? foreach ($data['fields'] as $field) {
+    $data['imports'][] = $this->getStructRecursive($field, 'java', $data['current_json'], true);
+} ?>
+<? foreach (array_unique(array_filter((array) $data['imports'])) as $full_class_name): ?>
+    <? if (substr($full_class_name, 0, strrpos($full_class_name, '.')) != $data['namespace']): ?>
+
+import <?=$full_class_name?>;
+
+    <? endif ?>
+<? endforeach ?>
+
+/**
+ * <?=$this->renderComment($data['doc'], " * ")?>
+ */
+@SCFSerializable
+public class <?=$data['name']?> {
+
+<? foreach ($data['fields'] as $field): ?>
+    /**
+     * <?=$this->renderComment($field['doc'], "     * ")?>
+     */
+    @SCFMember(orderId = <?=$field['key']?>)
+    private <?=$this->getJavaType($field['typeId'], $field['type'], $field)?> <?=$field['name']?>;
+
+<? endforeach ?>
+    public <?=$data['name']?>() {
+
+    }
+
+    public <?=$data['name']?>(<?=$this->getJavaArgumentList($data['fields'])?>) {
+<? foreach ($data['fields'] as $field): ?>
+        this.<?=$field['name']?> = <?=$field['name']?>;
+<? endforeach ?>
+    }
+
+<? foreach ($data['fields'] as $field): ?>
+    public <?=$this->getJavaType($field['typeId'], $field['type'], $field)?> get<?=ucfirst($field['name'])?>() {
+        return this.<?=$field['name']?>;
+    }
+
+    public void set<?=ucfirst($field['name'])?>(<?=$this->getJavaType($field['typeId'], $field['type'], $field)?> <?=$field['name']?>) {
+        this.<?=$field['name']?> = <?=$field['name']?>;
+    }
+
+<? endforeach ?>
+
+    @Override
+    public String toString() {
+        return "<?=$data['name']?>{" +
+<? foreach ($data['fields'] as $field): ?>
+                "<?=$field['name']?>=" + <?=$field['name']?> + ", " +
+<? endforeach ?>
+                '}';
+    }
+}
