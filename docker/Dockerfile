@@ -37,5 +37,8 @@ RUN buildDeps=" \
     && cp go/bin/gofmt /usr/bin/gofmt \
     && rm -rf go \
     && apt-get purge -y --auto-remove $buildDeps \
-    && mkdir -p /usr/thrift /usr/html /usr/json /usr/php /usr/java \
-    && cp -rf ../tool /usr/thrift_scf
+    && mkdir -p /usr/thrift /usr/html /usr/json /usr/php /usr/java
+
+COPY ./tool/ /usr/thrift_scf/
+
+COPY ./thrift_scf.sh /usr/local/bin/thrift_scf
