@@ -1,4 +1,4 @@
-FROM debian:buster-slim
+FROM php:8.0-cli-buster
 
 ENV THRIFT_VERSION 0.11.0
 
@@ -19,7 +19,7 @@ RUN buildDeps=" \
         make \
         pkg-config \
     "; \
-    apt-get update && apt-get install -y --no-install-recommends $buildDeps && apt-get install -y --no-install-recommends php-cli && rm -rf /var/lib/apt/lists/* \
+    apt-get update && apt-get install -y --no-install-recommends $buildDeps && rm -rf /var/lib/apt/lists/* \
     && curl -sSL "http://apache.mirrors.spacedump.net/thrift/$THRIFT_VERSION/thrift-$THRIFT_VERSION.tar.gz" -o thrift.tar.gz \
     && mkdir -p /usr/src/thrift \
     && tar zxf thrift.tar.gz -C /usr/src/thrift --strip-components=1 \
